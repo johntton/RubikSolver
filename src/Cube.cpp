@@ -1,24 +1,23 @@
 #include <iostream>
 #include <string>
-using namespace std;
 
 class RubikCube {
     public:
     
-    string cube[6][3][3]; // cube[face][row][col]
+    std::string cube[6][3][3]; // cube[face][row][col]
     enum Face { UP = 0, LEFT = 1, FRONT = 2, RIGHT = 3, BACK = 4, DOWN = 5 }; // Face indices
     
     RubikCube() {
         // Initialize a solved Rubik's Cube
-        cout << "Initialized a solved Rubik's Cube." << endl;
+        std::cout << "Initialized a solved Rubik's Cube." << std::endl;
 
-        string colors[6] = {"W", "O", "G", "R", "B", "Y"}; // White, Orange, Green, Red, Blue, Yellow
+        std::string colors[6] = {"W", "O", "G", "R", "B", "Y"}; // White, Orange, Green, Red, Blue, Yellow
 
         // Fills each face with its respective color
         for (int f = 0; f < 6; ++f) {
             for (int r = 0; r < 3; ++r) {
                 for (int c = 0; c < 3; ++c) {
-                    cube[f][r][c] = colors[f] + to_string(r * 3 + c + 1);
+                    cube[f][r][c] = colors[f] + std::to_string(r * 3 + c + 1);
                 }
             }
         }
@@ -28,7 +27,7 @@ class RubikCube {
         // Helper function to rotate a face
         if (isClockwise) {
             // Rotate face 90 degrees clockwise
-            string temp[3][3];
+            std::string temp[3][3];
             for (int r = 0; r < 3; ++r) {
                 for (int c = 0; c < 3; ++c) {
                     temp[2 - c][r] = cube[face][r][c];
@@ -41,7 +40,7 @@ class RubikCube {
             }
         } else {
             // Rotate face 90 degrees counter-clockwise
-            string temp[3][3];
+            std::string temp[3][3];
             for (int r = 0; r < 3; ++r) {
                 for (int c = 0; c < 3; ++c) {
                     temp[c][2 - r] = cube[face][r][c];
@@ -57,7 +56,7 @@ class RubikCube {
 
     void rotateEdgeHelper(Face face, bool isClockwise) {
         // Helper function to rotate the edges adjacent to a face
-        string temp[3];
+        std::string temp[3];
 
         switch (face) {
             case LEFT:
@@ -151,17 +150,17 @@ class RubikCube {
                 }
                 break;  
             default:
-                cout << "Edge rotation for face " << face << " not implemented yet." << endl;
+                std::cout << "Edge rotation for face " << face << " not implemented yet." << std::endl;
                 break;
         }
     }
 
-    void rotateFace(string face) {
+    void rotateFace(std::string face) {
         // Rotate the specified face of the cube
-        cout << "Rotating face: " << face << endl;
+        std::cout << "Rotating face: " << face << std::endl;
 
         char faceChar = face[0]; // first character
-        char modifier = '\0';    // default: no modifier
+        char modifier = '\0';    // default(no modifier)
 
         // check if there's a second character
         if (face.length() > 1) {    
@@ -169,12 +168,12 @@ class RubikCube {
         }
 
         if (faceChar != 'U' && faceChar != 'D' && faceChar != 'L' && faceChar != 'R' && faceChar != 'F' && faceChar != 'B') {
-            cout << "Invalid Face Character: " << faceChar << endl;
+            std::cout << "Invalid Face Character: " << faceChar << std::endl;
             return;
         }
 
         if (modifier != '2' && modifier != '\'' && modifier != '\0') {
-            cout << "Invalid Rotation Modifier: " << modifier << endl;
+            std::cout << "Invalid Rotation Modifier: " << modifier << std::endl;
             return;
         }
 
@@ -189,7 +188,7 @@ class RubikCube {
             case 'F': f = FRONT; break;
             case 'B': f = BACK; break;
             default:
-                cout << "Rotation for face " << face << " not implemented yet." << endl;
+                std::cout << "Rotation for face " << face << " not implemented yet." << std::endl;
             return;
         }
 
@@ -209,31 +208,33 @@ class RubikCube {
 
     void display() {
         // Display the current state of the cube
-        cout << "Displaying the cube state." << endl;
+        std::cout << "Displaying the cube state." << std::endl;
 
-        cout << "         | " << cube[0][0][0] << " " << cube[0][0][1] << " " << cube[0][0][2] << " |" << endl;
-        cout << "         | " << cube[0][1][0] << " " << cube[0][1][1] << " " << cube[0][1][2] << " |" << endl;
-        cout << "         | " << cube[0][2][0] << " " << cube[0][2][1] << " " << cube[0][2][2] << " |" << endl;
-        cout << "--------- ---------- --------------------" << endl;
+        std::cout << "         | " << cube[0][0][0] << " " << cube[0][0][1] << " " << cube[0][0][2] << " |" << std::endl;
+        std::cout << "         | " << cube[0][1][0] << " " << cube[0][1][1] << " " << cube[0][1][2] << " |" << std::endl;
+        std::cout << "         | " << cube[0][2][0] << " " << cube[0][2][1] << " " << cube[0][2][2] << " |" << std::endl;
+        std::cout << "--------- ---------- --------------------" << std::endl;
 
         for (int i = 0; i < 3; ++i) {
-            cout << cube[1][i][0] << " " << cube[1][i][1] << " " << cube[1][i][2] << " | ";
-            cout << cube[2][i][0] << " " << cube[2][i][1] << " " << cube[2][i][2] << " | ";
-            cout << cube[3][i][0] << " " << cube[3][i][1] << " " << cube[3][i][2] << " | ";
-            cout << cube[4][i][0] << " " << cube[4][i][1] << " " << cube[4][i][2] << endl;
+            std::cout << cube[1][i][0] << " " << cube[1][i][1] << " " << cube[1][i][2] << " | ";
+            std::cout << cube[2][i][0] << " " << cube[2][i][1] << " " << cube[2][i][2] << " | ";
+            std::cout << cube[3][i][0] << " " << cube[3][i][1] << " " << cube[3][i][2] << " | ";
+            std::cout << cube[4][i][0] << " " << cube[4][i][1] << " " << cube[4][i][2] << std::endl;
         } 
 
-        cout << "--------- ---------- --------------------" << endl;
-        cout << "         | " << cube[5][0][0] << " " << cube[5][0][1] << " " << cube[5][0][2] << " |" << endl;
-        cout << "         | " << cube[5][1][0] << " " << cube[5][1][1] << " " << cube[5][1][2] << " |" << endl;
-        cout << "         | " << cube[5][2][0] << " " << cube[5][2][1] << " " << cube[5][2][2] << " |" << endl;
+        std::cout << "--------- ---------- --------------------" << std::endl;
+        std::cout << "         | " << cube[5][0][0] << " " << cube[5][0][1] << " " << cube[5][0][2] << " |" << std::endl;
+        std::cout << "         | " << cube[5][1][0] << " " << cube[5][1][1] << " " << cube[5][1][2] << " |" << std::endl;
+        std::cout << "         | " << cube[5][2][0] << " " << cube[5][2][1] << " " << cube[5][2][2] << " |" << std::endl;
     }  
 };
 
 int main() {
     RubikCube cube;
-    string moves[] = {"F2", "U2", "R2", "D2", "F2", "D'", "L2", "F2", "L2", "R2", "U'", "F", "U", "B", "R'", "F'", "L", "D2", "B2", "R2", "F"};
-    for (string& move : moves) {
+
+    cube.display();
+    std::string moves[] = {"F2", "U2", "R2", "D2", "F2", "D'", "L2", "F2", "L2", "R2", "U'", "F", "U", "B", "R'", "F'", "L", "D2", "B2", "R2", "F"};
+    for (std::string& move : moves) {
         cube.rotateFace(move);
     }
     
