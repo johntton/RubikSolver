@@ -7,10 +7,14 @@
 
 // Global Variables
 cv::Mat img;
-int gridSize = 400;
+int gridSize = 300;
 int cellSize = gridSize / 3;
 
 class CubeScanner {
+    private: 
+        std::array<std::array<std::array<cv::Mat, 3>, 3>, 6> allFaces;
+        int currentFace = 0;
+
     public:
     CubeScanner() {}
 
@@ -60,6 +64,22 @@ class CubeScanner {
         }
         return roiArray;
     }
+
+    void saveFace(const std::array<std::array<cv::Mat, 3>, 3>& faceROI) {
+        if (currentFace < 6) {
+            allFaces[currentFace] = faceROI;
+            std::cout << "Face Saved" << std::endl;
+            currentFace++;
+        }
+    }
+
+    bool finished() const {
+        return currentFace == 6;
+    }
+
+    const auto& getAllFaces() const {
+        return allFaces;
+    }
 };
 
 int main() {
@@ -83,24 +103,32 @@ int main() {
         cv::Mat square = img(roi);
 
         Scanner.drawGrid(square);
-        roiArray = Scanner.extractROIs(square);
+        auto faceROI = Scanner.extractROIs(square);
         cv::imshow("Video", square);
 
         // Test that each cell is correct
-        cv::imshow("0, 0", roiArray[0][0]);
-        cv::imshow("0, 1", roiArray[0][1]);
-        cv::imshow("0, 2", roiArray[0][2]);
+        // cv::imshow("0, 0", roiArray[0][0]);
+        // cv::imshow("0, 1", roiArray[0][1]);
+        // cv::imshow("0, 2", roiArray[0][2]);
 
-        cv::imshow("1, 0", roiArray[1][0]);
-        cv::imshow("1, 1", roiArray[1][1]);
-        cv::imshow("1, 2", roiArray[1][2]);
+        // cv::imshow("1, 0", roiArray[1][0]);
+        // cv::imshow("1, 1", roiArray[1][1]);
+        // cv::imshow("1, 2", roiArray[1][2]);
 
-        cv::imshow("2, 0", roiArray[2][0]);
-        cv::imshow("2, 1", roiArray[2][1]);
-        cv::imshow("2, 2", roiArray[2][2]);
+        // cv::imshow("2, 0", roiArray[2][0]);
+        // cv::imshow("2, 1", roiArray[2][1]);
+        // cv::imshow("2, 2", roiArray[2][2]);
 
-        if (cv::waitKey(30) == 'q') break;
+        char key = cv::waitKey(1);
+
+        if (key == ' ') {
+            Scanner.saveFace(faceROI);
+        }
+
+        if (Scanner.finished()) {
+            break;
+        }
+
+        if (key == 'q') return 0;
     }
-
-    return 0;
 }
