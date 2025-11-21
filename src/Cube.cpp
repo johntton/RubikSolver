@@ -4,7 +4,7 @@
 class RubikCube {
     public:
     
-    std::string cube[6][3][3]; // cube[face][row][col]
+    std::array<std::array<std::array<std::string, 3>, 3>, 6> cube; // cube[face][row][col]
     enum Face { UP = 0, LEFT = 1, FRONT = 2, RIGHT = 3, BACK = 4, DOWN = 5 }; // Face indices
     
     RubikCube() {
@@ -228,16 +228,3 @@ class RubikCube {
         std::cout << "         | " << cube[5][2][0] << " " << cube[5][2][1] << " " << cube[5][2][2] << " |" << std::endl;
     }  
 };
-
-int main() {
-    RubikCube cube;
-
-    cube.display();
-    std::string moves[] = {"F2", "U2", "R2", "D2", "F2", "D'", "L2", "F2", "L2", "R2", "U'", "F", "U", "B", "R'", "F'", "L", "D2", "B2", "R2", "F"};
-    for (std::string& move : moves) {
-        cube.rotateFace(move);
-    }
-    
-    cube.display();
-    return 0;
-}

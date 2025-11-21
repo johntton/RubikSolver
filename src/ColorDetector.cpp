@@ -1,317 +1,273 @@
-#include <iostream>
+#include "/Users/johnton/RubikSolver/include/ColorDetector.h"
 #include <opencv2/opencv.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/objdetect.hpp>
+#include <iostream>
+#include <set>
+#include <cmath>
 
-cv::Mat img, roiBGR, roiLAB;
-std::vector<cv::Vec3f> colors;
-std::array<std::array<std::array<cv::Mat, 3>, 3>, 6> stickerColor;
-std::map<int, char> clusterToColor;
+ColorDetector::ColorDetector() {}
 
-class ColorDetector{
-    public:
-    cv::Mat centers;
-    cv::Mat labels;
+void ColorDetector::buildTrainingData(const std::array<std::array<std::array<cv::Mat, 3>, 3>, 6>& stickerColorInput) {
+    colors.clear();
+    stickerColor = stickerColorInput;
 
-    ColorDetector() {}
+    for (int face = 0; face < 6; ++face) {
+        for (int row = 0; row < 3; ++row) {
+            for (int col = 0; col < 3; ++col) {
+                cv::Mat roiBGR = stickerColor[face][row][col];
+                if (roiBGR.empty()) continue;
 
-    // Collects HSV values from all the ROI's and stores in colors array
-    void buildTrainingData(const std::array<std::array<std::array<cv::Mat, 3>, 3>, 6>& stickerColor) {
-        // Clear previous samples
-        colors.clear();
+                cv::Mat smooth;
+                cv::medianBlur(roiBGR, smooth, 3);
 
-        // Reduces the ROI, detects dominant color, standardizes HSV values
-        for (int face = 0; face < 6; ++face) {
-            for (int row = 0; row < 3; ++row) {
-                for (int col = 0; col < 3; ++col) {
-                    roiBGR = stickerColor[face][row][col];
-                    if (roiBGR.empty()) continue;
+                int x0 = smooth.cols * 25 / 100;
+                int y0 = smooth.rows * 25 / 100;
+                int w  = std::max(1, smooth.cols * 50 / 100);
+                int h  = std::max(1, smooth.rows * 50 / 100);
 
-                    // Smooths out image; reduces glares, shadows, weird edge spikes
-                    cv::Mat smooth;
-                    cv::medianBlur(roiBGR, smooth, 3);
+                cv::Rect inner(x0, y0, w, h);
+                cv::Mat sample = smooth(inner);
 
-                    // Moves in 25% from each edge, takes middle 50% for sampling
-                    int x0 = smooth.cols * 25 / 100;
-                    int y0 = smooth.rows * 25 / 100;
-                    int w  = std::max(1, smooth.cols * 50 / 100);
-                    int h  = std::max(1, smooth.rows * 50 / 100);
-                    cv::Rect inner(x0, y0, w, h);
-                    cv::Mat sample = smooth(inner);
+                cv::Mat roiLAB;
+                cv::cvtColor(sample, roiLAB, cv::COLOR_BGR2Lab);
 
-                    cv::cvtColor(sample, roiLAB, cv::COLOR_BGR2Lab);
+                for (int y = 0; y < roiLAB.rows; y += 2) {
+                    for (int x = 0; x < roiLAB.cols; x += 2) {
+                        auto pixel = roiLAB.at<cv::Vec3b>(y, x);
 
-                    // Extracts HSV values from each pixel sample
-                    for (int y = 0; y < roiLAB.rows; y += 2) {
-                        for (int x = 0; x < roiLAB.cols; x += 2) {
-                            auto pixel = roiLAB.at<cv::Vec3b>(y, x);
-                            
-                            // k-means requires floating point data
-                            float L = static_cast<float>(pixel[0]); 
-                            float A = static_cast<float>(pixel[1]);
-                            float B = static_cast<float>(pixel[2]);
+                        float L = pixel[0];
+                        float A = pixel[1];
+                        float B = pixel[2];
 
-                            // Filters out very dark pixels
-                            if (L < 20) continue;
+                        if (L < 20) continue;
 
-                            // Normalize to 0-1
-                            colors.push_back(cv::Vec3f(L / 255.0f, (A - 128.0f) / 127.0f, (B - 128.0f) / 127.0f));
-                        }
+                        colors.push_back(cv::Vec3f(
+                            L / 255.0f,
+                            (A - 128.0f) / 127.0f,
+                            (B - 128.0f) / 127.0f
+                        ));
                     }
                 }
             }
         }
     }
+}
 
-    // Conducts k-Means model
-    void runKMeans() {
-        if (colors.empty()) {
-            std::cout << "No training data! Did you run buildTrainingData()?\n";
-            return;
+void ColorDetector::runKMeans() {
+    if (colors.empty()) {
+        std::cout << "No training data! Did you run buildTrainingData()?\n";
+        return;
+    }
+
+    int N = colors.size();
+    cv::Mat data(N, 3, CV_32F);
+
+    for (int i = 0; i < N; i++) {
+        data.at<float>(i, 0) = colors[i][0];
+        data.at<float>(i, 1) = colors[i][1];
+        data.at<float>(i, 2) = colors[i][2];
+    }
+
+    labels = cv::Mat();
+    centers = cv::Mat();
+
+    cv::kmeans(
+        data,
+        6,
+        labels,
+        cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 10, 1.0),
+        5,
+        cv::KMEANS_PP_CENTERS,
+        centers
+    );
+
+    std::cout << "\nK-means cluster centers:\n";
+    for (int i = 0; i < centers.rows; i++) {
+        float Ln = centers.at<float>(i,0);
+        float An = centers.at<float>(i,1);
+        float Bn = centers.at<float>(i,2);
+
+        std::cout << "Center " << i << ": "
+                  << "L=" << Ln * 255.0f << ", "
+                  << "A=" << (An * 127.0f + 128.0f) << ", "
+                  << "B=" << (Bn * 127.0f + 128.0f) << "\n";
+    }
+}
+
+void ColorDetector::assignClustersToCubeColors(const std::array<std::array<std::array<cv::Mat,3>,3>,6>& faces) {
+    clusterToColor.clear();
+
+    std::cout << "Canonical mapping incomplete; entering interactive calibration.\n";
+
+    const std::string win = "Center Calibration";
+    cv::namedWindow(win, cv::WINDOW_AUTOSIZE);
+    std::set<char> usedColors;
+
+    for (int f = 0; f < 6; ++f) {
+        cv::Mat roi = faces[f][1][1];
+        if (roi.empty()) continue;
+
+        int x0 = roi.cols * 40 / 100;
+        int y0 = roi.rows * 40 / 100;
+        int w  = std::max(1, roi.cols * 50 / 100);
+        int h  = std::max(1, roi.rows * 50 / 100);
+
+        cv::Rect inner(x0, y0, w, h);
+        cv::Mat tight = roi(inner).clone();
+
+        cv::Mat lab;
+        cv::cvtColor(tight, lab, cv::COLOR_BGR2Lab);
+        cv::Scalar m = cv::mean(lab);
+
+        float L = m[0];
+        float A = m[1];
+        float B = m[2];
+
+        float Ln = L / 255.0f;
+        float An = (A - 128.0f) / 127.0f;
+        float Bn = (B - 128.0f) / 127.0f;
+
+        float bestDist = FLT_MAX;
+        int bestCluster = -1;
+
+        for (int c = 0; c < centers.rows; ++c) {
+            float cL = centers.at<float>(c,0);
+            float cA = centers.at<float>(c,1);
+            float cB = centers.at<float>(c,2);
+
+            float dL = Ln - cL;
+            float dA = An - cA;
+            float dB = Bn - cB;
+
+            float dist = sqrtf(dL*dL + dA*dA + dB*dB);
+
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestCluster = c;
+            }
         }
 
-        // Num of pixel samples
-        int N = colors.size();
+        cv::imshow(win, tight);
+        std::cout << "Face " << f << ": press w,o,g,r,b,y.\n";
 
-        // Create Nx3 float matrix for kmeans (using normalized values)
-        cv::Mat data(N, 3, CV_32F);
-        for (int i = 0; i < N; i++) {
-            data.at<float>(i, 0) = colors[i][0]; // H (0..1)
-            data.at<float>(i, 1) = colors[i][1]; // S (0..1)
-            data.at<float>(i, 2) = colors[i][2]; // V (0..1)
-        }
+        while (true) {
+            int key = cv::waitKey(0);
+            if (key < 0) continue;
 
-        // Output containers
-        labels = cv::Mat();
-        centers = cv::Mat();
+            char c = tolower((char)key);
+            char mapped = 0;
 
-        // Run k-means
-        cv::kmeans(
-            data,                   // Nx3 matrix
-            6,                      // K = 6 clusters
-            labels,                 // List of integers 0-5 to specify clusters
-            cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 10, 1.0), // 10 max iterations OR centers don't change much (EPS)
-            5,                      // Run 5 times with different initial seeds and get best results
-            cv::KMEANS_PP_CENTERS,  // "Smart Initialization"
-            centers                 // Stores in centers
-        );
+            if (c=='w') mapped='W';
+            if (c=='o') mapped='O';
+            if (c=='g') mapped='G';
+            if (c=='r') mapped='R';
+            if (c=='b') mapped='B';
+            if (c=='y') mapped='Y';
 
-        // Print centers (debugging)
-        std::cout << "\nK-means cluster centers (LAB normalized):\n";
-        for (int i = 0; i < 6; i++) {
-            float Ln = centers.at<float>(i, 0);
-            float An = centers.at<float>(i, 1);
-            float Bn = centers.at<float>(i, 2);
-            std::cout 
-                << "Center " << i << ": "
-                << "L=" << (Ln * 255.0f) << ", "
-                << "A=" << (An * 127.0f + 128.0f) << ", "
-                << "B=" << (Bn * 127.0f + 128.0f) << "\n";
+            if (!mapped) {
+                std::cout << "Invalid key.\n";
+                continue;
+            }
+            if (usedColors.count(mapped)) {
+                std::cout << "Already assigned.\n";
+                continue;
+            }
+
+            clusterToColor[bestCluster] = mapped;
+            usedColors.insert(mapped);
+            std::cout << "Assigned cluster " << bestCluster << " -> " << mapped << "\n";
+            break;
         }
     }
 
-    // Maps clusters to colors
-    void assignClustersToCubeColors(const std::array<std::array<std::array<cv::Mat,3>,3>,6>& faces) {
-        clusterToColor.clear();
+    cv::destroyWindow(win);
+}
 
-        std::cout << "Canonical mapping incomplete; entering interactive calibration.\n";
+std::array<std::array<std::array<char,3>,3>,6>
+ColorDetector::classifyAllFaces(const std::array<std::array<std::array<cv::Mat,3>,3>,6>& faces) {
+    std::array<std::array<std::array<char,3>,3>,6> result{};
 
-        const std::string win = "Center Calibration";
-        cv::namedWindow(win, cv::WINDOW_AUTOSIZE);
-        std::set<char> usedColors;
+    for (int f = 0; f < 6; f++)
+        for (int r = 0; r < 3; r++)
+            for (int c = 0; c < 3; c++)
+                result[f][r][c] = classifyROI(faces[f][r][c]);
 
-        // USER CALIBRATION
-        for (int f = 0; f < 6; ++f) {
-            cv::Mat roi = faces[f][1][1];
-            if (roi.empty()) continue;
+    return result;
+}
 
-            // Inner Region of Center Tile
-            int x0 = roi.cols * 40 / 100;
-            int y0 = roi.rows * 40 / 100;
-            int w  = std::max(1, roi.cols * 50 / 100);
-            int h  = std::max(1, roi.rows * 50 / 100);
-            cv::Rect inner(x0, y0, w, h);
-            cv::Mat tight = roi(inner).clone();
+char ColorDetector::classifyROI(const cv::Mat& roi) {
+    if (roi.empty() || centers.empty())
+        return '?';
 
-            // compute nearest cluster for this face center
-            cv::Mat lab;
-            cv::cvtColor(tight, lab, cv::COLOR_BGR2Lab);
-            cv::Scalar m = cv::mean(lab);
-            
-            float L = static_cast<float>(m[0]);
-            float A = static_cast<float>(m[1]);
-            float B = static_cast<float>(m[2]);
+    cv::Mat small;
+    cv::medianBlur(roi, small, 3);
+
+    int x0 = small.cols * 25 / 100;
+    int y0 = small.rows * 25 / 100;
+    int w  = std::max(1, small.cols * 50 / 100);
+    int h  = std::max(1, small.rows * 50 / 100);
+
+    cv::Rect inner(x0, y0, w, h);
+    cv::Mat sample = small(inner);
+
+    cv::Mat lab;
+    cv::cvtColor(sample, lab, cv::COLOR_BGR2Lab);
+
+    std::vector<int> counts(centers.rows, 0);
+
+    for (int y = 0; y < lab.rows; y++) {
+        for (int x = 0; x < lab.cols; x++) {
+            auto p = lab.at<cv::Vec3b>(y, x);
+
+            float L = p[0];
+            float A = p[1];
+            float B = p[2];
+
+            if (L < 20) continue;
 
             float Ln = L / 255.0f;
             float An = (A - 128.0f) / 127.0f;
             float Bn = (B - 128.0f) / 127.0f;
 
-            float bestDist = FLT_MAX; 
-            int bestCluster = -1;
-            for (int c = 0; c < centers.rows; ++c) {
-                // Get's each cluster's center
-                float clusterL = centers.at<float>(c,0);
-                float clusterA = centers.at<float>(c,1);
-                float clusterB = centers.at<float>(c,2);
-                
-                float dL = Ln - clusterL;
-                float dA = An - clusterA;
-                float dB = Bn - clusterB;
+            float bestDist = FLT_MAX;
+            int bestC = -1;
 
-                // Calculate Uclidian distance
-                float dist = std::sqrt(dL*dL + dA*dA + dB*dB);
-                
-                // If distnace for this cluster is smaller, assign to cluster
-                if (dist < bestDist) { 
-                    bestDist = dist; 
-                    bestCluster = c; 
+            for (int c = 0; c < centers.rows; c++) {
+                float cL = centers.at<float>(c,0);
+                float cA = centers.at<float>(c,1);
+                float cB = centers.at<float>(c,2);
+
+                float dL = Ln - cL;
+                float dA = An - cA;
+                float dB = Bn - cB;
+
+                float dist = sqrtf(dL*dL + dA*dA + dB*dB);
+
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    bestC = c;
                 }
             }
 
-            // DISPLAYS REDUCED CENTER TILE ROI AND HAVE USER CLASSIFY EACH ONE
-            cv::imshow(win, tight);
-            std::cout << "Face " << f << ": press key for color (w=white,o=orange,g=green,r=red,b=blue,y=yellow)." << std::endl;
-            
-            while (true) {
-                int k = cv::waitKey(0);
-                if (k < 0) continue;
-                char kc = static_cast<char>(k);
-                kc = std::tolower(kc);
-                char mapped = 0;
-                
-                if (kc == 'w') mapped = 'W';
-                if (kc == 'o') mapped = 'O';
-                if (kc == 'g') mapped = 'G';
-                if (kc == 'r') mapped = 'R';
-                if (kc == 'b') mapped = 'B';
-                if (kc == 'y') mapped = 'Y';
-                
-                if (mapped == 0) {
-                    std::cout << "Invalid key. Use w,o,g,r,b,y." << std::endl;
-                    continue;
-                }
-                if (usedColors.count(mapped)) {
-                    std::cout << "Color already assigned. Press another key." << std::endl;
-                    continue;
-                }
-                // Assign user selected color to clusterToColor
-                if (bestCluster >= 0) {
-                    clusterToColor[bestCluster] = mapped;
-                    usedColors.insert(mapped);
-                    std::cout << "Assigned cluster " << bestCluster << " -> " << mapped << "\n";
-                }
-                break;
-            }
+            if (bestC >= 0)
+                counts[bestC]++;
         }
-        cv::destroyWindow(win);
     }
 
-    // Pixel data -> cube color
-    std::array<std::array<std::array<char,3>,3>,6> classifyAllFaces(const std::array<std::array<std::array<cv::Mat,3>,3>,6>& faces)
-    {
-        std::array<std::array<std::array<char,3>,3>,6> result;
+    int bestCluster = -1;
+    int bestCount = 0;
 
-        for (int f = 0; f < 6; f++) {
-            for (int r = 0; r < 3; r++) {
-                for (int c = 0; c < 3; c++) {
-                    // Given the ROI image for this sticker, determine which cube color it is
-                    result[f][r][c] = classifyROI(faces[f][r][c]);
-                }
-            }
+    for (int i = 0; i < counts.size(); i++) {
+        if (counts[i] > bestCount) {
+            bestCount = counts[i];
+            bestCluster = i;
         }
-
-        return result;
     }
 
-    // Classify ROI by assigning inner pixels to nearest k-means center and taking majority vote
-    char classifyROI(const cv::Mat& roi) {
-        // ROI is empty OR K-means cluster centers havn't been computed
-        if (roi.empty() || centers.empty()) return '?';
+    if (bestCluster < 0)
+        return '?';
 
-        // Blur ROI
-        cv::Mat small;
-        cv::medianBlur(roi, small, 3);
+    if (!clusterToColor.count(bestCluster))
+        return '?';
 
-        // Moves in 25% from each edge, takes middle 50% for sampling
-        int x0 = small.cols * 25 / 100;
-        int y0 = small.rows * 25 / 100;
-        int w  = std::max(1, small.cols * 50 / 100);
-        int h  = std::max(1, small.rows * 50 / 100);
-        cv::Rect inner(x0, y0, w, h);
-        cv::Mat sample = small(inner);
-
-        cv::Mat lab;
-        cv::cvtColor(sample, lab, cv::COLOR_BGR2Lab);
-
-        // Every time a pixel matches a cluster, increment appropriate counter
-        std::vector<int> counts(centers.rows, 0);
-
-        // Extracts HSV values from each pixel sample
-        for (int y = 0; y < lab.rows; y += 1) {
-            for (int x = 0; x < lab.cols; x += 1) {
-                auto p = lab.at<cv::Vec3b>(y, x);
-                float L = static_cast<float>(p[0]);
-                float A = static_cast<float>(p[1]);
-                float B = static_cast<float>(p[2]);
-
-                // Filters out very dark pixels
-                if (L < 20) continue;
-
-                float Ln = L / 255.0f;
-                float An = (A - 128.0f) / 127.0f;
-                float Bn = (B - 128.0f) / 127.0f;
-
-                // Find Nearest Cluster
-                float bestDist = FLT_MAX;
-                int bestC = -1;
-
-                for (int c = 0; c < centers.rows; ++c) {
-                    // Get's each cluster's center
-                    float clusterL = centers.at<float>(c,0);
-                    float clusterA = centers.at<float>(c,1);
-                    float clusterB = centers.at<float>(c,2);
-                    
-                    float dL = Ln - clusterL;
-                    float dA = An - clusterA;
-                    float dB = Bn - clusterB;
-                    
-                    // Calculate Uclidian distance
-                    float dist = std::sqrt(dL*dL + dA*dA + dB*dB);
-                    
-                    // If distnace for this cluster is smaller
-                    if (dist < bestDist) { 
-                        bestDist = dist; 
-                        bestC = c; 
-                    }
-                }
-
-                // Increment counter for that cluster
-                if (bestC >= 0) counts[bestC]++;
-            }
-        }
-
-        // Choose cluster with max count
-        int bestCluster = -1; 
-        int bestCount = 0;
-        for (int c = 0; c < (int)counts.size(); ++c) {
-            if (counts[c] > bestCount) { 
-                bestCount = counts[c]; 
-                bestCluster = c; 
-            }
-        }
-        
-        if (bestCluster < 0) {
-            return '?';
-        }
-        
-        auto it = clusterToColor.find(bestCluster);
-        if (it == clusterToColor.end()) {
-            return '?';
-        }
-        
-        // Returns letter
-        return it->second;
-    }
-};
+    return clusterToColor[bestCluster];
+}
