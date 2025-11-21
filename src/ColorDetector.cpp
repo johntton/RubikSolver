@@ -1,4 +1,4 @@
-#include "/Users/johnton/RubikSolver/include/ColorDetector.h"
+#include "include/ColorDetector.h"
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <set>
