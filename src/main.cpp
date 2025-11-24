@@ -55,19 +55,11 @@ int main() {
     
         const auto& faces = scanner.getAllFaces();
 
-        // 1. collect pixels
         colorDetect.buildTrainingData(faces);
-
-        // 2. run kmeans
         colorDetect.runKMeans();
-
-        // 3. map clusters → cube colors using face centers
         colorDetect.assignClustersToCubeColors(faces);
-
-        // 4. classify all 54 stickers
         auto cubeState = colorDetect.classifyAllFaces(faces);
 
-        // 5. print cube state
         std::cout << "\nFinal Cube State:\n";
         for (int f = 0; f < 6; f++) {
             std::cout << "Face " << f << ":\n";
