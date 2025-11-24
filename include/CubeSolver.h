@@ -10,6 +10,7 @@ public:
     char mapColor(char color);
     std::string convertToString(const std::array<std::array<std::array<char, 3>, 3>, 6>& cube);
     std::string runKociemba(const std::string cubeString);
+    void printCube(std::array<std::array<std::array<char,3>,3>,6> cube);
 
 private:
     enum Face { UP = 0, RIGHT = 1, FRONT = 2, DOWN = 3, LEFT = 4, BACK = 5 };
