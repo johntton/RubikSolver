@@ -1,4 +1,4 @@
-#include "include/CubeScanner.h"
+#include "CubeScanner.h"
 
 CubeScanner::CubeScanner()
     : currentFace(0), gridSize(300), cellSize(gridSize / 3) {}
