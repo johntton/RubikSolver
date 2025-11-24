@@ -8,6 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(OpenCV REQUIRED)
 
 include_directories(${OpenCV_INCLUDE_DIRS})
+include_directories(${CMAKE_SOURCE_DIR}/include)
 include_directories(kociemba/include)
 
 set(KOCIEMBA_SOURCES
