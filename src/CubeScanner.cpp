@@ -1,7 +1,32 @@
 #include "CubeScanner.h"
 
 CubeScanner::CubeScanner()
-    : currentFace(0), gridSize(300), cellSize(gridSize / 3) {}
+    : currentFace(0), gridSize(300), cellSize(gridSize / 3), cap(1)  {}
+
+cv::Mat CubeScanner::initCamera() {
+    if (!cap.isOpened()) {
+        std::cerr << "Camera failed to open!\n";
+        return cv::Mat();
+    }
+
+    cap.read(img);
+    if (img.empty()) {
+        std::cerr << "Frame grab failed!\n";
+        return cv::Mat();
+    }
+
+    int w = img.cols;
+    int h = img.rows;
+    int side = std::min(w, h);
+
+    int x = (w - side) / 2;
+    int y = (h - side) / 2;
+
+    cv::Rect roi(x, y, side, side);
+    cv::Mat square = img(roi).clone(); 
+
+    return square;
+}
 
 void CubeScanner::drawGrid(cv::Mat& frame) {
     int frameWidth = frame.cols;

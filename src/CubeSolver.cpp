@@ -68,3 +68,17 @@ std::string Solver::runKociemba(const std::string cubeString) {
 
     return std::string(result);
 }
+
+void Solver::printCube(std::array<std::array<std::array<char,3>,3>,6> cube) {
+    std::cout << "\nFinal Cube State:\n";
+    for (int f = 0; f < 6; f++) {
+        std::cout << "Face " << f << ":\n";
+        for (int r = 0; r < 3; r++) {
+            for (int c = 0; c < 3; c++) {
+                std::cout << cube[f][r][c] << " ";
+            }
+            std::cout << "\n";
+        }
+        std::cout << "\n";
+    }
+}
