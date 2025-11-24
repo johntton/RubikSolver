@@ -1,9 +1,9 @@
-#include "include/CubeSolver.h"
+#include "CubeSolver.h"
 #include <iostream>
 #include <filesystem>
 
 extern "C" {
-    #include "kociemba/include/search.h"
+    #include "search.h"
 }
 
 Solver::Solver() {

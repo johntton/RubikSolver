@@ -8,9 +8,9 @@
 #include <map>
 #include <string>
 #include <filesystem>
-#include "include/ColorDetector.h"
-#include "include/CubeScanner.h"
-#include "include/CubeSolver.h"
+#include "ColorDetector.h"
+#include "CubeScanner.h"
+#include "CubeSolver.h"
 
 int main() {
     cv::Mat img;
