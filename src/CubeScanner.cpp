@@ -46,8 +46,7 @@ void CubeScanner::drawGrid(cv::Mat& frame) {
     }
 }
 
-std::array<std::array<cv::Mat, 3>, 3>
-CubeScanner::extractROIs(cv::Mat& frame) {
+std::array<std::array<cv::Mat, 3>, 3> CubeScanner::extractROIs(cv::Mat& frame) {
     std::array<std::array<cv::Mat, 3>, 3> roiArray;
 
     int frameWidth = frame.cols;

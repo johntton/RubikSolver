@@ -4,7 +4,11 @@
 #include <set>
 #include <cmath>
 
-ColorDetector::ColorDetector() {}
+ColorDetector::ColorDetector() {
+    std::cout << "=============================\n";
+    std::cout << "     Rubik's Cube Solver     \n";
+    std::cout << "=============================\n";
+}
 
 void ColorDetector::buildTrainingData(const std::array<std::array<std::array<cv::Mat, 3>, 3>, 6>& stickerColorInput) {
     colors.clear();
