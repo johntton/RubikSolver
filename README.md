@@ -22,9 +22,9 @@ It uses a webcam to scan a physical Rubik’s Cube, detects sticker colors with 
 - C++17 compiler
 - OpenCV installed on your system (4.x recommended)
 
-macOS OpenCV installation (Homebrew):
-brew install opencv
-brew link opencv
+macOS OpenCV installation (Homebrew):<br>
+`brew install opencv`<br>
+`brew link opencv`
 
 ---
 
@@ -46,6 +46,15 @@ Build the project:<br>
 
 Run the executable:<br>
 `./RubikSolver`
+
+---
+
+ ## How It Works
+1. Captures image from camera  
+2. Detects sticker colors (HSV)  
+3. Builds cube state  
+4. Runs Kociemba solver  
+5. Prints move sequence  
 
 ---
 
