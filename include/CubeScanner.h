@@ -6,7 +6,7 @@
 
 class CubeScanner {
 public:
-    CubeScanner();
+    CubeScanner(int cameraIndex);
     cv::Mat initCamera();
     void drawGrid(cv::Mat& frame);
     std::array<std::array<cv::Mat, 3>, 3> extractROIs(cv::Mat& frame);

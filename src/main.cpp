@@ -13,7 +13,11 @@
 #include "CubeSolver.h"
 
 int main() {
-    CubeScanner scanner;
+    std::cout << "Camera Index: " << std::endl;
+    int cameraIndex;
+    std::cin >> cameraIndex;
+
+    CubeScanner scanner(cameraIndex);
     ColorDetector colorDetect;
     Solver cubeSolver;
 

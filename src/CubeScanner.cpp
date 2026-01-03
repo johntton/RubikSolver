@@ -1,7 +1,7 @@
 #include "CubeScanner.h"
 
-CubeScanner::CubeScanner()
-    : currentFace(0), gridSize(300), cellSize(gridSize / 3), cap(1)  {}
+CubeScanner::CubeScanner(int cameraIndex)
+    : currentFace(0), gridSize(300), cellSize(gridSize / 3), cap(cameraIndex) {}
 
 cv::Mat CubeScanner::initCamera() {
     if (!cap.isOpened()) {
