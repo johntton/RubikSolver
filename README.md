@@ -51,7 +51,7 @@ Run the executable:<br>
 
  ## How It Works
 1. Captures image from camera  
-2. Detects sticker colors (HSV)  
+2. Detects sticker colors (LAB)  
 3. Builds cube state  
 4. Runs Kociemba solver  
 5. Prints move sequence  
