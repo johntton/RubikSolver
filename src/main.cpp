@@ -39,19 +39,19 @@ int main() {
         }
 
         if (key == 'q') return 0;
-        }
+    }
     
-        const auto& faces = scanner.getAllFaces();
+    const auto& faces = scanner.getAllFaces();
 
-        colorDetect.buildTrainingData(faces);
-        colorDetect.runKMeans();
-        colorDetect.assignClustersToCubeColors(faces);
-        auto cubeState = colorDetect.classifyAllFaces(faces);
-        cubeSolver.printCube(cubeState);
+    colorDetect.buildTrainingData(faces);
+    colorDetect.runKMeans();
+    colorDetect.assignClustersToCubeColors(faces);
+    auto cubeState = colorDetect.classifyAllFaces(faces);
+    cubeSolver.printCube(cubeState);
 
-        std::string kociembaString = cubeSolver.convertToString(cubeState);
-        std::string sol = cubeSolver.runKociemba(kociembaString);
-        std::cout << "Solution: " << sol << std::endl;
+    std::string kociembaString = cubeSolver.convertToString(cubeState);
+    std::string sol = cubeSolver.runKociemba(kociembaString);
+    std::cout << "Solution: " << sol << std::endl;
 
     return 0;
 };
