@@ -24,13 +24,13 @@ int main() {
     while (true) {
         auto square = scanner.initCamera();
         scanner.drawGrid(square);
-        auto faceROI = scanner.extractROIs(square);
 
         cv::imshow("Video", square);
 
         char key = cv::waitKey(1);
 
         if (key == ' ') {
+            auto faceROI = scanner.extractROIs(square);
             scanner.saveFace(faceROI);
         }
 
