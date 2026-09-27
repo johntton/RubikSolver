@@ -15,15 +15,15 @@
 
 // Scan order and orientation the rest of the pipeline assumes (see Solver::order
 // and the Kociemba facelet net): U, R, F, D, L, B, using the standard WCA color
-// scheme (White=U, Red=R, Green=F, Yellow=D, Orange=L, Blue=B). Every side face
-// is shown with White kept on top; U and D are shown by tilting the cube toward
-// or away from the camera instead of spinning it, so the sticker grid lines up
-// with the row/column order the solver expects.
+// scheme (White=U, Red=R, Green=F, Yellow=D, Orange=L, Blue=B). Every step is
+// stated as a target orientation (which face points at the camera, which face
+// is on top) rather than a motion, since there's no single "correct" way to
+// move the cube there - only one correct orientation once it arrives.
 static const char* kFaceInstructions[6] = {
-    "Face 1/6: Tilt cube forward - show WHITE to the camera",
+    "Face 1/6: Show WHITE to the camera, with BLUE on top",
     "Face 2/6: Keep White on top - turn cube to show RED",
     "Face 3/6: Keep White on top - show GREEN to the camera",
-    "Face 4/6: Tilt cube backward - show YELLOW to the camera",
+    "Face 4/6: Show YELLOW to the camera, with GREEN on top",
     "Face 5/6: Keep White on top - turn cube to show ORANGE",
     "Face 6/6: Keep White on top - turn cube to show BLUE"
 };
