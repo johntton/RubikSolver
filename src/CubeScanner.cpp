@@ -81,6 +81,10 @@ bool CubeScanner::finished() const {
     return currentFace == 6;
 }
 
+int CubeScanner::getCurrentFace() const {
+    return currentFace;
+}
+
 const std::array<std::array<std::array<cv::Mat, 3>, 3>, 6>&
 CubeScanner::getAllFaces() const {
     return allFaces;

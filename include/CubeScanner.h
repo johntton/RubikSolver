@@ -12,6 +12,7 @@ public:
     std::array<std::array<cv::Mat, 3>, 3> extractROIs(cv::Mat& frame);
     void saveFace(const std::array<std::array<cv::Mat, 3>, 3>& faceROI);
     bool finished() const;
+    int getCurrentFace() const;
     const std::array<std::array<std::array<cv::Mat, 3>, 3>, 6>& getAllFaces() const;
 
 private:

@@ -13,6 +13,31 @@
 #include "CubeSolver.h"
 #include "Cube.h"
 
+// Scan order and orientation the rest of the pipeline assumes (see Solver::order
+// and the Kociemba facelet net): U, R, F, D, L, B, using the standard WCA color
+// scheme (White=U, Red=R, Green=F, Yellow=D, Orange=L, Blue=B). Every side face
+// is shown with White kept on top; U and D are shown by tilting the cube toward
+// or away from the camera instead of spinning it, so the sticker grid lines up
+// with the row/column order the solver expects.
+static const char* kFaceInstructions[6] = {
+    "Face 1/6: Tilt cube forward - show WHITE to the camera",
+    "Face 2/6: Keep White on top - turn cube to show RED",
+    "Face 3/6: Keep White on top - show GREEN to the camera",
+    "Face 4/6: Tilt cube backward - show YELLOW to the camera",
+    "Face 5/6: Keep White on top - turn cube to show ORANGE",
+    "Face 6/6: Keep White on top - turn cube to show BLUE"
+};
+
+void drawScanInstructions(cv::Mat& frame, int faceIndex) {
+    if (faceIndex < 0 || faceIndex >= 6) return;
+
+    cv::rectangle(frame, cv::Point(0, 0), cv::Point(frame.cols, 60), cv::Scalar(0, 0, 0), cv::FILLED);
+    cv::putText(frame, kFaceInstructions[faceIndex], cv::Point(10, 25),
+                cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(255, 255, 255), 2);
+    cv::putText(frame, "Press SPACE to capture, Q to quit", cv::Point(10, 50),
+                cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(200, 200, 200), 1);
+}
+
 int main() {
     std::cout << "Camera Index: " << std::endl;
     int cameraIndex;
@@ -32,6 +57,7 @@ int main() {
         }
 
         scanner.drawGrid(square);
+        drawScanInstructions(square, scanner.getCurrentFace());
 
         cv::imshow("Video", square);
 
