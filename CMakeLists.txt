@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(OpenCV REQUIRED)
+find_package(OpenCV REQUIRED COMPONENTS core imgproc highgui videoio imgcodecs)
 
 include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(${CMAKE_SOURCE_DIR}/include)
@@ -25,6 +25,7 @@ add_executable(RubikSolver
     src/CubeScanner.cpp
     src/ColorDetector.cpp
     src/CubeSolver.cpp
+    src/Cube.cpp
     ${KOCIEMBA_SOURCES}
 )
 
