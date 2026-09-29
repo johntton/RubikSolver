@@ -56,7 +56,3 @@ Run the executable:<br>
 4. Runs Kociemba solver  
 5. Prints move sequence  
 
----
-
-## License
-MIT License.
