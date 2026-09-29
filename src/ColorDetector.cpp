@@ -3,6 +3,38 @@
 #include <iostream>
 #include <set>
 #include <cmath>
+#include <string>
+
+namespace {
+    // Standard WCA sticker colors (approximate sRGB), used to seed k-means so
+    // clusters start at known anchors instead of a random/++ split. Random
+    // seeding is what let clusters merge or split differently under different
+    // lighting (e.g. white and yellow drifting into the same cluster).
+    struct CanonicalColor { char code; cv::Vec3b bgr; };
+    const std::array<CanonicalColor, 6> kCanonicalColors = {{
+        {'W', {255, 255, 255}},
+        {'O', {0, 88, 255}},
+        {'G', {72, 155, 0}},
+        {'R', {52, 18, 183}},
+        {'B', {173, 70, 0}},
+        {'Y', {0, 213, 255}},
+    }};
+
+    std::array<cv::Vec3f, 6> canonicalLabCenters() {
+        std::array<cv::Vec3f, 6> result;
+        for (int i = 0; i < 6; ++i) {
+            cv::Mat swatch(1, 1, CV_8UC3, cv::Scalar(
+                kCanonicalColors[i].bgr[0],
+                kCanonicalColors[i].bgr[1],
+                kCanonicalColors[i].bgr[2]));
+            cv::Mat lab;
+            cv::cvtColor(swatch, lab, cv::COLOR_BGR2Lab);
+            auto p = lab.at<cv::Vec3b>(0, 0);
+            result[i] = cv::Vec3f(p[0] / 255.0f, (p[1] - 128.0f) / 127.0f, (p[2] - 128.0f) / 127.0f);
+        }
+        return result;
+    }
+}
 
 ColorDetector::ColorDetector() {
     std::cout << "=============================\n";
@@ -71,18 +103,47 @@ void ColorDetector::runKMeans() {
         data.at<float>(i, 2) = colors[i][2];
     }
 
-    labels = cv::Mat();
+    // Seed each sample's initial label from its nearest canonical color instead
+    // of letting k-means pick random/++ starting centers. This makes the
+    // clustering converge to the same 6 color identities run-to-run instead of
+    // depending on how badly lighting has shifted the raw pixel cloud.
+    auto canonical = canonicalLabCenters();
+    cv::Mat initialLabels(N, 1, CV_32S);
+    for (int i = 0; i < N; ++i) {
+        float bestDist = FLT_MAX;
+        int bestC = 0;
+        for (int c = 0; c < 6; ++c) {
+            float dL = colors[i][0] - canonical[c][0];
+            float dA = colors[i][1] - canonical[c][1];
+            float dB = colors[i][2] - canonical[c][2];
+            float dist = dL*dL + dA*dA + dB*dB;
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestC = c;
+            }
+        }
+        initialLabels.at<int>(i, 0) = bestC;
+    }
+
+    labels = initialLabels;
     centers = cv::Mat();
 
+    // attempts must be 1 with KMEANS_USE_INITIAL_LABELS: OpenCV only honors the
+    // supplied labels on the first attempt and falls back to random centers for
+    // any further ones, which would defeat the seeding above.
     cv::kmeans(
         data,
         6,
         labels,
         cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 10, 1.0),
-        5,
-        cv::KMEANS_PP_CENTERS,
+        1,
+        cv::KMEANS_USE_INITIAL_LABELS,
         centers
     );
+
+    std::vector<int> counts(centers.rows, 0);
+    for (int i = 0; i < labels.rows; ++i)
+        counts[labels.at<int>(i, 0)]++;
 
     std::cout << "\nK-means cluster centers:\n";
     for (int i = 0; i < centers.rows; i++) {
@@ -90,11 +151,49 @@ void ColorDetector::runKMeans() {
         float An = centers.at<float>(i,1);
         float Bn = centers.at<float>(i,2);
 
-        std::cout << "Center " << i << ": "
+        std::cout << "Center " << i << " (seeded " << kCanonicalColors[i].code << "): "
                   << "L=" << Ln * 255.0f << ", "
                   << "A=" << (An * 127.0f + 128.0f) << ", "
-                  << "B=" << (Bn * 127.0f + 128.0f) << "\n";
+                  << "B=" << (Bn * 127.0f + 128.0f) << ", "
+                  << "pixels=" << counts[i] << "\n";
     }
+}
+
+void ColorDetector::showClusterSwatches() const {
+    if (centers.empty()) {
+        std::cout << "No cluster centers yet; run runKMeans() first.\n";
+        return;
+    }
+
+    std::vector<int> counts(centers.rows, 0);
+    for (int i = 0; i < labels.rows; ++i)
+        counts[labels.at<int>(i, 0)]++;
+
+    const int patchSize = 120;
+    cv::Mat board(patchSize + 30, patchSize * centers.rows, CV_8UC3, cv::Scalar(30, 30, 30));
+
+    for (int c = 0; c < centers.rows; ++c) {
+        cv::Mat lab(1, 1, CV_8UC3, cv::Scalar(
+            cv::saturate_cast<uchar>(centers.at<float>(c,0) * 255.0f),
+            cv::saturate_cast<uchar>(centers.at<float>(c,1) * 127.0f + 128.0f),
+            cv::saturate_cast<uchar>(centers.at<float>(c,2) * 127.0f + 128.0f)));
+        cv::Mat bgr;
+        cv::cvtColor(lab, bgr, cv::COLOR_Lab2BGR);
+        cv::Vec3b color = bgr.at<cv::Vec3b>(0, 0);
+
+        cv::Rect patch(c * patchSize, 0, patchSize, patchSize);
+        board(patch).setTo(cv::Scalar(color[0], color[1], color[2]));
+
+        cv::putText(board, std::to_string(counts[c]) + "px", cv::Point(c * patchSize + 5, patchSize + 20),
+                    cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1);
+    }
+
+    std::cout << "Cluster swatches: if two patches look like the same color, or a color is "
+                 "missing, the clustering has already failed before calibration.\n";
+    std::cout << "Press any key to continue to calibration.\n";
+    cv::imshow("Cluster Swatches", board);
+    cv::waitKey(0);
+    cv::destroyWindow("Cluster Swatches");
 }
 
 void ColorDetector::assignClustersToCubeColors(const std::array<std::array<std::array<cv::Mat,3>,3>,6>& faces) {

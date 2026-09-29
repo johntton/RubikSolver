@@ -11,6 +11,7 @@ public:
     ColorDetector();
     void buildTrainingData(const std::array<std::array<std::array<cv::Mat, 3>, 3>, 6>& stickerColor);
     void runKMeans();
+    void showClusterSwatches() const;
     void assignClustersToCubeColors(const std::array<std::array<std::array<cv::Mat,3>,3>,6>& faces);
     std::array<std::array<std::array<char,3>,3>,6> classifyAllFaces(const std::array<std::array<std::array<cv::Mat,3>,3>,6>& faces);
     char classifyROI(const cv::Mat& roi);

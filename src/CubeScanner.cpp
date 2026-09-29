@@ -1,7 +1,21 @@
 #include "CubeScanner.h"
 
 CubeScanner::CubeScanner(int cameraIndex)
-    : currentFace(0), gridSize(300), cellSize(gridSize / 3), cap(cameraIndex) {}
+    : currentFace(0), gridSize(300), cellSize(gridSize / 3), cap(cameraIndex) {
+    if (cap.isOpened()) {
+        // Let auto-exposure/white-balance settle on the actual scene, then freeze
+        // them. Otherwise each of the 6 face captures can land on a different
+        // auto-exposure/WB estimate, which is the main reason colors like
+        // white/yellow drift into each other between faces. Property values and
+        // support are backend/driver-dependent (0.25/0 follow the common V4L2
+        // convention for manual mode); cap.set() failures are ignored since
+        // there's no safe fallback if the driver doesn't support locking.
+        cv::Mat warmup;
+        for (int i = 0; i < 20; ++i) cap.read(warmup);
+        cap.set(cv::CAP_PROP_AUTO_EXPOSURE, 0.25);
+        cap.set(cv::CAP_PROP_AUTO_WB, 0);
+    }
+}
 
 cv::Mat CubeScanner::initCamera() {
     if (!cap.isOpened()) {

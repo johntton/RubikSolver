@@ -79,6 +79,7 @@ int main() {
 
     colorDetect.buildTrainingData(faces);
     colorDetect.runKMeans();
+    colorDetect.showClusterSwatches();
     colorDetect.assignClustersToCubeColors(faces);
     auto cubeState = colorDetect.classifyAllFaces(faces);
     cubeSolver.printCube(cubeState);
