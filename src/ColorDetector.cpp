@@ -1,9 +1,7 @@
 #include "ColorDetector.h"
 #include <opencv2/opencv.hpp>
 #include <iostream>
-#include <set>
 #include <cmath>
-#include <string>
 
 namespace {
     // Standard WCA sticker colors (approximate sRGB), used to seed k-means so
@@ -199,11 +197,11 @@ void ColorDetector::showClusterSwatches() const {
 void ColorDetector::assignClustersToCubeColors(const std::array<std::array<std::array<cv::Mat,3>,3>,6>& faces) {
     clusterToColor.clear();
 
-    std::cout << "Canonical mapping incomplete; entering interactive calibration.\n";
-
-    const std::string win = "Center Calibration";
-    cv::namedWindow(win, cv::WINDOW_AUTOSIZE);
-    std::set<char> usedColors;
+    // Scan order is fixed (see kFaceInstructions in main.cpp): U,R,F,D,L,B under
+    // the standard WCA color scheme, so each face index's center color is known
+    // ahead of time - no need to ask the user to name it face by face.
+    static const char kFaceOrder[6] = {'W', 'R', 'G', 'Y', 'O', 'B'};
+    std::map<int, int> clusterToFace;
 
     for (int f = 0; f < 6; ++f) {
         cv::Mat roi = faces[f][1][1];
@@ -230,6 +228,7 @@ void ColorDetector::assignClustersToCubeColors(const std::array<std::array<std::
         float Bn = (B - 128.0f) / 127.0f;
 
         float bestDist = FLT_MAX;
+        float secondDist = FLT_MAX;
         int bestCluster = -1;
 
         for (int c = 0; c < centers.rows; ++c) {
@@ -244,45 +243,37 @@ void ColorDetector::assignClustersToCubeColors(const std::array<std::array<std::
             float dist = sqrtf(dL*dL + dA*dA + dB*dB);
 
             if (dist < bestDist) {
+                secondDist = bestDist;
                 bestDist = dist;
                 bestCluster = c;
+            } else if (dist < secondDist) {
+                secondDist = dist;
             }
         }
 
-        cv::imshow(win, tight);
-        std::cout << "Face " << f << ": press w,o,g,r,b,y.\n";
+        char mapped = kFaceOrder[f];
+        clusterToColor[bestCluster] = mapped;
+        std::cout << "Face " << f << " center -> cluster " << bestCluster
+                  << " -> " << mapped << " (dist=" << bestDist << ")\n";
 
-        while (true) {
-            int key = cv::waitKey(0);
-            if (key < 0) continue;
-
-            char c = tolower((char)key);
-            char mapped = 0;
-
-            if (c=='w') mapped='W';
-            if (c=='o') mapped='O';
-            if (c=='g') mapped='G';
-            if (c=='r') mapped='R';
-            if (c=='b') mapped='B';
-            if (c=='y') mapped='Y';
-
-            if (!mapped) {
-                std::cout << "Invalid key.\n";
-                continue;
-            }
-            if (usedColors.count(mapped)) {
-                std::cout << "Already assigned.\n";
-                continue;
-            }
-
-            clusterToColor[bestCluster] = mapped;
-            usedColors.insert(mapped);
-            std::cout << "Assigned cluster " << bestCluster << " -> " << mapped << "\n";
-            break;
+        // Two independent red flags that the auto-assignment above is wrong:
+        // the nearest cluster is barely closer than the next-best one (colors
+        // not well separated, e.g. white/yellow), or two different faces
+        // matched the same cluster (a merged cluster, or a face scanned out of
+        // the expected order/orientation). Neither aborts the scan - just
+        // flags it, since the swatch preview already ran before this step.
+        if (secondDist != FLT_MAX && bestDist > 0.6f * secondDist) {
+            std::cout << "  WARNING: closest cluster isn't clearly separated from "
+                         "the next best (dist=" << bestDist << " vs " << secondDist
+                      << "). Double-check the swatch preview.\n";
         }
+        if (clusterToFace.count(bestCluster)) {
+            std::cout << "  WARNING: cluster " << bestCluster << " was already "
+                         "matched to face " << clusterToFace[bestCluster]
+                      << ". Clustering likely merged two colors.\n";
+        }
+        clusterToFace[bestCluster] = f;
     }
-
-    cv::destroyWindow(win);
 }
 
 std::array<std::array<std::array<char,3>,3>,6>
