@@ -4,10 +4,6 @@
 #include <cmath>
 
 namespace {
-    // Standard WCA sticker colors (approximate sRGB), used to seed k-means so
-    // clusters start at known anchors instead of a random/++ split. Random
-    // seeding is what let clusters merge or split differently under different
-    // lighting (e.g. white and yellow drifting into the same cluster).
     struct CanonicalColor { char code; cv::Vec3b bgr; };
     const std::array<CanonicalColor, 6> kCanonicalColors = {{
         {'W', {255, 255, 255}},
@@ -101,10 +97,6 @@ void ColorDetector::runKMeans() {
         data.at<float>(i, 2) = colors[i][2];
     }
 
-    // Seed each sample's initial label from its nearest canonical color instead
-    // of letting k-means pick random/++ starting centers. This makes the
-    // clustering converge to the same 6 color identities run-to-run instead of
-    // depending on how badly lighting has shifted the raw pixel cloud.
     auto canonical = canonicalLabCenters();
     cv::Mat initialLabels(N, 1, CV_32S);
     for (int i = 0; i < N; ++i) {
@@ -126,9 +118,6 @@ void ColorDetector::runKMeans() {
     labels = initialLabels;
     centers = cv::Mat();
 
-    // attempts must be 1 with KMEANS_USE_INITIAL_LABELS: OpenCV only honors the
-    // supplied labels on the first attempt and falls back to random centers for
-    // any further ones, which would defeat the seeding above.
     cv::kmeans(
         data,
         6,
@@ -197,9 +186,6 @@ void ColorDetector::showClusterSwatches() const {
 void ColorDetector::assignClustersToCubeColors(const std::array<std::array<std::array<cv::Mat,3>,3>,6>& faces) {
     clusterToColor.clear();
 
-    // Scan order is fixed (see kFaceInstructions in main.cpp): U,R,F,D,L,B under
-    // the standard WCA color scheme, so each face index's center color is known
-    // ahead of time - no need to ask the user to name it face by face.
     static const char kFaceOrder[6] = {'W', 'R', 'G', 'Y', 'O', 'B'};
     std::map<int, int> clusterToFace;
 
@@ -256,12 +242,7 @@ void ColorDetector::assignClustersToCubeColors(const std::array<std::array<std::
         std::cout << "Face " << f << " center -> cluster " << bestCluster
                   << " -> " << mapped << " (dist=" << bestDist << ")\n";
 
-        // Two independent red flags that the auto-assignment above is wrong:
-        // the nearest cluster is barely closer than the next-best one (colors
-        // not well separated, e.g. white/yellow), or two different faces
-        // matched the same cluster (a merged cluster, or a face scanned out of
-        // the expected order/orientation). Neither aborts the scan - just
-        // flags it, since the swatch preview already ran before this step.
+        // Warn on ambiguous cluster matches or two faces sharing a cluster.
         if (secondDist != FLT_MAX && bestDist > 0.6f * secondDist) {
             std::cout << "  WARNING: closest cluster isn't clearly separated from "
                          "the next best (dist=" << bestDist << " vs " << secondDist

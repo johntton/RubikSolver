@@ -6,9 +6,7 @@
 
 class RubikCube {
 public:
-    // Matches the UP,RIGHT,FRONT,DOWN,LEFT,BACK face order used by
-    // ColorDetector::classifyAllFaces and Solver::convertToString, so a
-    // scanned cube state can be loaded directly with loadState().
+    // Same face order as ColorDetector and Solver.
     enum Face { UP = 0, RIGHT = 1, FRONT = 2, DOWN = 3, LEFT = 4, BACK = 5 };
 
     RubikCube();
