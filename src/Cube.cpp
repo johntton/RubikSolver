@@ -23,7 +23,7 @@ void RubikCube::rotateFaceHelper(Face face, bool isClockwise) {
         char temp[3][3];
         for (int r = 0; r < 3; ++r) {
             for (int c = 0; c < 3; ++c) {
-                temp[2 - c][r] = cube[face][r][c];
+                temp[c][2 - r] = cube[face][r][c];
             }
         }
         for (int r = 0; r < 3; ++r) {
@@ -35,7 +35,7 @@ void RubikCube::rotateFaceHelper(Face face, bool isClockwise) {
         char temp[3][3];
         for (int r = 0; r < 3; ++r) {
             for (int c = 0; c < 3; ++c) {
-                temp[c][2 - r] = cube[face][r][c];
+                temp[2 - c][r] = cube[face][r][c];
             }
         }
         for (int r = 0; r < 3; ++r) {
@@ -53,16 +53,16 @@ void RubikCube::rotateEdgeHelper(Face face, bool isClockwise) {
         case LEFT:
             if (isClockwise) {
                 for (int i = 0; i < 3; ++i) temp[i] = cube[UP][i][0];
-                for (int i = 0; i < 3; ++i) cube[UP][i][0] = cube[FRONT][i][0];
-                for (int i = 0; i < 3; ++i) cube[FRONT][i][0] = cube[DOWN][i][0];
-                for (int i = 0; i < 3; ++i) cube[DOWN][i][0] = cube[BACK][2 - i][2];
-                for (int i = 0; i < 3; ++i) cube[BACK][2 - i][2] = temp[i];
-            } else {
-                for (int i = 0; i < 3; ++i) temp[i] = cube[UP][i][0];
                 for (int i = 0; i < 3; ++i) cube[UP][i][0] = cube[BACK][2 - i][2];
                 for (int i = 0; i < 3; ++i) cube[BACK][2 - i][2] = cube[DOWN][i][0];
                 for (int i = 0; i < 3; ++i) cube[DOWN][i][0] = cube[FRONT][i][0];
                 for (int i = 0; i < 3; ++i) cube[FRONT][i][0] = temp[i];
+            } else {
+                for (int i = 0; i < 3; ++i) temp[i] = cube[UP][i][0];
+                for (int i = 0; i < 3; ++i) cube[UP][i][0] = cube[FRONT][i][0];
+                for (int i = 0; i < 3; ++i) cube[FRONT][i][0] = cube[DOWN][i][0];
+                for (int i = 0; i < 3; ++i) cube[DOWN][i][0] = cube[BACK][2 - i][2];
+                for (int i = 0; i < 3; ++i) cube[BACK][2 - i][2] = temp[i];
             }
             break;
         case RIGHT:
